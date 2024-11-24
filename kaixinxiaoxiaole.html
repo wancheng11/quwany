@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>开心消消乐</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            width: 100%;
+            background: #fff;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .score-panel {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: #fff;
+            margin: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .score-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FF6B6B;
+        }
+
+        .game-container {
+            width: 90%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            margin: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 2px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .candy {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .candy:active {
+            transform: scale(0.9);
+        }
+
+        .candy.selected {
+            transform: scale(1.15);
+            z-index: 2;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
+            animation: pulse 1s infinite;
+        }
+
+        .candy.matched {
+            animation: pop 0.3s ease-out;
+        }
+
+        .candy.hint {
+            animation: hintPulse 1s infinite;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(0); }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+                background: rgba(255, 107, 107, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(255, 107, 107, 0.8);
+                background: rgba(255, 107, 107, 0.3);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+                background: rgba(255, 107, 107, 0.2);
+            }
+        }
+
+        @keyframes hintPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+                background: rgba(255, 215, 0, 0.2);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+                background: rgba(255, 215, 0, 0.3);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+                background: rgba(255, 215, 0, 0.2);
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 15px;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255,107,107,0.3);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 添加滑动返回区域 */
+        .slide-back-area {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            z-index: 1000;
+        }
+
+        /* 游戏结束弹窗 */
+        .game-over-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        }
+
+        .final-score {
+            font-size: 24px;
+            font-weight: 600;
+            color: #FF6B6B;
+            margin: 20px 0;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 修改选中效果的样式 */
+        .candy {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .candy.selected {
+            transform: scale(1.15);
+            z-index: 2;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
+            animation: pulse 1s infinite;
+        }
+
+        .candy.hint {
+            animation: hintPulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+                background: rgba(255, 107, 107, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(255, 107, 107, 0.8);
+                background: rgba(255, 107, 107, 0.3);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+                background: rgba(255, 107, 107, 0.2);
+            }
+        }
+
+        @keyframes hintPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+                background: rgba(255, 215, 0, 0.2);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+                background: rgba(255, 215, 0, 0.3);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+                background: rgba(255, 215, 0, 0.2);
+            }
+        }
+
+        /* 添加晃动动画样式 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-back-area"></div>
+
+    <div class="header">
+        <button class="back-btn" onclick="history.back()">
+            <i class="material-icons">arrow_back</i>
+        </button>
+        <h1>开心消消乐</h1>
+    </div>
+
+    <div class="score-panel">
+        <div class="score-item">
+            <div class="score-label">分数</div>
+            <div class="score-value" id="score">0</div>
+            <div class="target-score">目标: <span id="targetScore">100</span></div>
+        </div>
+        <div class="score-item">
+            <div class="score-label">关卡</div>
+            <div class="score-value" id="level">${currentLevel}</div>
+        </div>
+        <div class="score-item">
+            <div class="score-label">时间</div>
+            <div class="score-value" id="timer">60</div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="game-grid" id="gameGrid"></div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="restartGame()">重新开始</button>
+        <button class="control-btn" onclick="showHint()">提示</button>
+    </div>
+
+    <div class="game-over-modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2>游戏结束</h2>
+            <div class="final-score">得分: <span id="finalScore">0</span></div>
+            <div class="modal-buttons">
+                <button class="control-btn" onclick="restartGame()">再玩一次</button>
+                <button class="control-btn" onclick="window.location.href='quwanyouxi.html'">返回列表</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 8;
+        const CANDY_TYPES = ['🍎', '🍊', '🍇', '🍓', '🍪', '🍫'];
+        let score = 0;
+        let moves = 30;
+        let selectedCandy = null;
+        let grid = [];
+
+        // 添加关卡和倒计时相关变量
+        let currentLevel = 1;
+        let timeLeft = 120; // 初始120秒
+        let timer = null;
+        let targetScore = 100; // 初始目标分数
+
+        // 添加关卡配置
+        const levelConfig = {
+            1: { target: 100, time: 120, gridSize: 8, minMatch: 3 },
+            2: { target: 200, time: 120, gridSize: 8, minMatch: 3 },
+            3: { target: 350, time: 120, gridSize: 8, minMatch: 4 },
+            4: { target: 500, time: 120, gridSize: 8, minMatch: 4 },
+            5: { target: 700, time: 120, gridSize: 9, minMatch: 4 }
+            // 可以继续添加更多关卡
+        };
+
+        // 初始化游戏
+        function initGame() {
+            const config = levelConfig[currentLevel];
+            timeLeft = config.time;
+            targetScore = config.target;
+            score = 0;
+            
+            // 更新显示
+            document.getElementById('targetScore').textContent = targetScore;
+            document.getElementById('level').textContent = currentLevel;
+            updateTimer();
+            document.getElementById('score').textContent = '0';
+            
+            // 清除之前的定时器
+            if (timer) clearInterval(timer);
+            
+            // 开始倒计时
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    checkLevelComplete();
+                }
+            }, 1000);
+
+            // 初始化游戏网格
+            const gameGrid = document.getElementById('gameGrid');
+            gameGrid.innerHTML = '';
+            grid = [];
+
+            // 创建初始网格
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const candy = createCandy(i, j);
+                    gameGrid.appendChild(candy);
+                    grid[i][j] = candy;
+                }
+            }
+
+            // 确保初始状态没有匹配
+            while (checkMatches().length > 0) {
+                shuffleGrid();
+            }
+        }
+
+        // 创建糖果元素
+        function createCandy(row, col) {
+            const candy = document.createElement('div');
+            candy.className = 'candy';
+            candy.dataset.row = row;
+            candy.dataset.col = col;
+            candy.textContent = CANDY_TYPES[Math.floor(Math.random() * CANDY_TYPES.length)];
+            
+            candy.addEventListener('click', () => handleCandyClick(candy));
+            
+            return candy;
+        }
+
+        // 添加自动提示功能
+        let lastInteractionTime = Date.now();
+        let hintTimer = null;
+
+        // 修改handleCandyClick函数，添加交互时间记录
+        function handleCandyClick(candy) {
+            lastInteractionTime = Date.now();
+            clearTimeout(hintTimer);
+            startHintTimer();
+
+            if (!selectedCandy) {
+                // 第一次选择
+                selectedCandy = candy;
+                candy.classList.add('selected');
+            } else if (selectedCandy === candy) {
+                // 取消选择
+                selectedCandy.classList.remove('selected');
+                selectedCandy = null;
+            } else {
+                // 第二次选择，检查是否相邻
+                const row1 = parseInt(selectedCandy.dataset.row);
+                const col1 = parseInt(selectedCandy.dataset.col);
+                const row2 = parseInt(candy.dataset.row);
+                const col2 = parseInt(candy.dataset.col);
+
+                if (isAdjacent(row1, col1, row2, col2)) {
+                    // 尝试交换
+                    const tempText = selectedCandy.textContent;
+                    selectedCandy.textContent = candy.textContent;
+                    candy.textContent = tempText;
+
+                    // 检查是否形成匹配
+                    const matches = checkMatches();
+                    if (matches.length >= 3) {
+                        handleMatches(matches);
+                    } else {
+                        // 如果没有形成匹配，交换回来并添加晃动动画
+                        candy.style.animation = 'shake 0.5s';
+                        selectedCandy.style.animation = 'shake 0.5s';
+                        setTimeout(() => {
+                            candy.textContent = selectedCandy.textContent;
+                            selectedCandy.textContent = tempText;
+                            candy.style.animation = '';
+                            selectedCandy.style.animation = '';
+                        }, 500);
+                    }
+                }
+
+                // 清除选择状态
+                selectedCandy.classList.remove('selected');
+                selectedCandy = null;
+            }
+        }
+
+        // 检查两个糖果是否相邻
+        function isAdjacent(row1, col1, row2, col2) {
+            return (Math.abs(row1 - row2) === 1 && col1 === col2) ||
+                   (Math.abs(col1 - col2) === 1 && row1 === row2);
+        }
+
+        // 交换两个糖果
+        async function swapCandies(candy1, candy2) {
+            const tempText = candy1.textContent;
+            candy1.textContent = candy2.textContent;
+            candy2.textContent = tempText;
+
+            // 检查是否形成匹配
+            const matches = checkMatches();
+            if (matches.length > 0) {
+                await handleMatches(matches);
+            } else {
+                // 如果没有匹配，交换回来
+                candy1.textContent = candy2.textContent;
+                candy2.textContent = tempText;
+            }
+        }
+
+        // 检查匹配
+        function checkMatches() {
+            const matches = new Set();
+
+            // 检查行
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE - 2; j++) {
+                    if (grid[i][j].textContent !== '' &&
+                        grid[i][j].textContent === grid[i][j+1].textContent &&
+                        grid[i][j].textContent === grid[i][j+2].textContent) {
+                        matches.add(grid[i][j]);
+                        matches.add(grid[i][j+1]);
+                        matches.add(grid[i][j+2]);
+                        
+                        // 检查是否有更多相同的糖果
+                        let k = j + 3;
+                        while (k < GRID_SIZE && grid[i][k].textContent === grid[i][j].textContent) {
+                            matches.add(grid[i][k]);
+                            k++;
+                        }
+                    }
+                }
+            }
+
+            // 检查列
+            for (let j = 0; j < GRID_SIZE; j++) {
+                for (let i = 0; i < GRID_SIZE - 2; i++) {
+                    if (grid[i][j].textContent !== '' &&
+                        grid[i][j].textContent === grid[i+1][j].textContent &&
+                        grid[i][j].textContent === grid[i+2][j].textContent) {
+                        matches.add(grid[i][j]);
+                        matches.add(grid[i+1][j]);
+                        matches.add(grid[i+2][j]);
+                        
+                        // 检查是否有更多相同的糖果
+                        let k = i + 3;
+                        while (k < GRID_SIZE && grid[k][j].textContent === grid[i][j].textContent) {
+                            matches.add(grid[k][j]);
+                            k++;
+                        }
+                    }
+                }
+            }
+
+            return Array.from(matches);
+        }
+
+        // 处理匹配
+        async function handleMatches(matches) {
+            if (matches.length < 3) return; // 确保至少有3个匹配
+
+            // 添加消除动画
+            matches.forEach(candy => {
+                candy.classList.add('matched');
+            });
+
+            // 等待动画完成
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // 更新分数（根据消除数量给予不同分数）
+            const matchScore = matches.length * 10; // 每个消除的糖果10分
+            updateScore(score + matchScore);
+
+            // 移除匹配的糖果
+            matches.forEach(candy => {
+                candy.textContent = '';
+                candy.classList.remove('matched');
+            });
+
+            // 下落糖果
+            await dropCandies();
+
+            // 填充新的糖果
+            fillNewCandies();
+
+            // 检查是否还有新的匹配
+            const newMatches = checkMatches();
+            if (newMatches.length >= 3) {
+                await handleMatches(newMatches);
+            }
+
+            // 检查游戏是否结束
+            if (moves === 0) {
+                gameOver();
+            }
+        }
+
+        // 下落糖果
+        async function dropCandies() {
+            let dropped = false;
+
+            for (let j = 0; j < GRID_SIZE; j++) {
+                for (let i = GRID_SIZE - 1; i > 0; i--) {
+                    if (grid[i][j].textContent === '') {
+                        for (let k = i - 1; k >= 0; k--) {
+                            if (grid[k][j].textContent !== '') {
+                                grid[i][j].textContent = grid[k][j].textContent;
+                                grid[k][j].textContent = '';
+                                dropped = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (dropped) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
+            return dropped;
+        }
+
+        // 填充新的糖果
+        function fillNewCandies() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (grid[i][j].textContent === '') {
+                        grid[i][j].textContent = CANDY_TYPES[Math.floor(Math.random() * CANDY_TYPES.length)];
+                    }
+                }
+            }
+        }
+
+        // 更新分数
+        function updateScore(newScore) {
+            score = newScore;
+            document.getElementById('score').textContent = score;
+            
+            // 检查是否达到目标分数
+            if (score >= targetScore) {
+                checkLevelComplete();
+            }
+        }
+
+        // 更新步数
+        function updateMoves(newMoves) {
+            moves = newMoves;
+            document.getElementById('moves').textContent = moves;
+            if (moves === 0) {
+                gameOver();
+            }
+        }
+
+        // 游戏结束
+        function gameOver() {
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOverModal').style.display = 'flex';
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            document.getElementById('gameOverModal').style.display = 'none';
+            initGame();
+        }
+
+        // 提示功能
+        function showHint() {
+            // 查找可能的匹配
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE - 1; j++) {
+                    // 尝试水平交换
+                    const temp = grid[i][j].textContent;
+                    grid[i][j].textContent = grid[i][j+1].textContent;
+                    grid[i][j+1].textContent = temp;
+
+                    if (checkMatches().length > 0) {
+                        // 找到可能的移动，示提示
+                        grid[i][j].classList.add('hint');
+                        grid[i][j+1].classList.add('hint');
+                        
+                        // 交换回来
+                        grid[i][j+1].textContent = grid[i][j].textContent;
+                        grid[i][j].textContent = temp;
+
+                        // 2秒后移除提示
+                        setTimeout(() => {
+                            grid[i][j].classList.remove('hint');
+                            grid[i][j+1].classList.remove('hint');
+                        }, 2000);
+
+                        return;
+                    }
+
+                    // 交换回来
+                    grid[i][j+1].textContent = grid[i][j].textContent;
+                    grid[i][j].textContent = temp;
+                }
+            }
+
+            // 垂直方向也做类似检查
+            for (let i = 0; i < GRID_SIZE - 1; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const temp = grid[i][j].textContent;
+                    grid[i][j].textContent = grid[i+1][j].textContent;
+                    grid[i+1][j].textContent = temp;
+
+                    if (checkMatches().length > 0) {
+                        grid[i][j].classList.add('hint');
+                        grid[i+1][j].classList.add('hint');
+                        
+                        grid[i+1][j].textContent = grid[i][j].textContent;
+                        grid[i][j].textContent = temp;
+
+                        setTimeout(() => {
+                            grid[i][j].classList.remove('hint');
+                            grid[i+1][j].classList.remove('hint');
+                        }, 2000);
+
+                        return;
+                    }
+
+                    grid[i+1][j].textContent = grid[i][j].textContent;
+                    grid[i][j].textContent = temp;
+                }
+            }
+
+            // 如果没有找到可能的移动
+            alert('没有找到可能的移动！');
+        }
+
+        // 打乱网格
+        function shuffleGrid() {
+            const candies = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    candies.push(grid[i][j].textContent);
+                }
+            }
+
+            // 随机打乱
+            for (let i = candies.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [candies[i], candies[j]] = [candies[j], candies[i]];
+            }
+
+            // 重新填充网格
+            let index = 0;
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j].textContent = candies[index++];
+                }
+            }
+        }
+
+        // 添加滑动返回功能
+        let startX = 0;
+        let startY = 0;
+        const threshold = 50;
+
+        document.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (startX < 50) {
+                const deltaX = e.touches[0].clientX - startX;
+                const deltaY = Math.abs(e.touches[0].clientY - startY);
+                
+                if (deltaX > deltaY && deltaX > 0) {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (startX < 50) {
+                const deltaX = e.changedTouches[0].clientX - startX;
+                const deltaY = Math.abs(e.changedTouches[0].clientY - startY);
+                
+                if (deltaX > threshold && deltaX > deltaY) {
+                    window.location.href = 'quwanyouxi.html';
+                }
+            }
+        });
+
+        // 添加关卡完成检查函数
+        function checkLevelComplete() {
+            clearInterval(timer);
+            
+            if (score >= targetScore) {
+                // 通关
+                showLevelComplete(true);
+                currentLevel++;
+            } else {
+                // 失败
+                showLevelComplete(false);
+            }
+        }
+
+        // 修改游戏结束显示函数
+        function showLevelComplete(success) {
+            const modal = document.getElementById('gameOverModal');
+            const content = modal.querySelector('.modal-content');
+            
+            if (success) {
+                content.innerHTML = `
+                    <div class="level-complete">恭喜通关！</div>
+                    <div class="final-score">得分: ${score}</div>
+                    <div class="modal-buttons">
+                        <button class="control-btn" onclick="nextLevel()">下一关</button>
+                        <button class="control-btn" onclick="window.location.href='quwanyouxi.html'">返回列表</button>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="level-failed">挑战失败</div>
+                    <div class="final-score">得分: ${score}</div>
+                    <div class="target-score">目标分数: ${targetScore}</div>
+                    <div class="modal-buttons">
+                        <button class="control-btn" onclick="restartGame()">重新挑战</button>
+                        <button class="control-btn" onclick="window.location.href='quwanyouxi.html'">返回列表</button>
+                    </div>
+                `;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        // 添加下一关函数
+        function nextLevel() {
+            if (levelConfig[currentLevel]) {
+                document.getElementById('gameOverModal').style.display = 'none';
+                initGame();
+            } else {
+                alert('恭喜你完成了所有关卡！');
+                window.location.href = 'quwanyouxi.html';
+            }
+        }
+
+        // 添加自动提示计时器
+        function startHintTimer() {
+            if (hintTimer) {
+                clearTimeout(hintTimer);
+            }
+            
+            hintTimer = setTimeout(() => {
+                if (Date.now() - lastInteractionTime >= 5000) { // 5秒无操作
+                    showAutoHint();
+                }
+            }, 5000);
+        }
+
+        // 自动提示函数
+        function showAutoHint() {
+            // 清除之前的提示
+            document.querySelectorAll('.candy.hint').forEach(candy => {
+                candy.classList.remove('hint');
+            });
+
+            // 查找可能的匹配
+            let hintFound = false;
+            
+            // 检查水平方向
+            for (let i = 0; i < GRID_SIZE && !hintFound; i++) {
+                for (let j = 0; j < GRID_SIZE - 2 && !hintFound; j++) {
+                    if (grid[i][j].textContent === grid[i][j+1].textContent &&
+                        grid[i][j].textContent === grid[i][j+2].textContent) {
+                        grid[i][j].classList.add('hint');
+                        grid[i][j+1].classList.add('hint');
+                        grid[i][j+2].classList.add('hint');
+                        hintFound = true;
+                    }
+                }
+            }
+
+            // 检查垂直方向
+            if (!hintFound) {
+                for (let j = 0; j < GRID_SIZE && !hintFound; j++) {
+                    for (let i = 0; i < GRID_SIZE - 2 && !hintFound; i++) {
+                        if (grid[i][j].textContent === grid[i+1][j].textContent &&
+                            grid[i][j].textContent === grid[i+2][j].textContent) {
+                            grid[i][j].classList.add('hint');
+                            grid[i+1][j].classList.add('hint');
+                            grid[i+2][j].classList.add('hint');
+                            hintFound = true;
+                        }
+                    }
+                }
+            }
+
+            // 3秒后移除提示
+            setTimeout(() => {
+                document.querySelectorAll('.candy.hint').forEach(candy => {
+                    candy.classList.remove('hint');
+                });
+                // 重新开始计时器
+                startHintTimer();
+            }, 3000);
+        }
+
+        // 添加晃动动画样式
+        const shakeStyle = document.createElement('style');
+        shakeStyle.textContent = `
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }`;
+        document.head.appendChild(shakeStyle);
+
+        // 在页面加载时启动提示计时器
+        document.addEventListener('DOMContentLoaded', function() {
+            currentLevel = 1;
+            initGame();
+            startHintTimer();
+        });
+
+        // 添加页面可见性变化监听
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                clearTimeout(hintTimer);
+            } else {
+                lastInteractionTime = Date.now();
+                startHintTimer();
+            }
+        });
+
+        // 修改时间显示格式，将秒数转换为分:秒格式
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+    </script>
+</body>
+</html> 

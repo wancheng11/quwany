@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>娱乐直播</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* 顶部搜索栏 */
+        .search-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            padding: 15px;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #f5f5f5;
+            border-radius: 20px;
+            padding: 8px 15px;
+        }
+
+        .search-icon {
+            color: #999;
+            margin-right: 8px;
+        }
+
+        .search-input {
+            border: none;
+            background: none;
+            flex: 1;
+            font-size: 14px;
+            outline: none;
+        }
+
+        /* 内容区域 */
+        .content {
+            margin-top: 60px;
+            padding: 15px;
+        }
+
+        /* 分类导航 */
+        .category-tabs {
+            display: flex;
+            background: #fff;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            position: relative;
+            z-index: 1;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        .category-tab.active {
+            color: #FF6B6B;
+        }
+
+        .tab-slider {
+            position: absolute;
+            width: 33.33%;
+            height: calc(100% - 8px);
+            background: #FFF0F0;
+            border-radius: 8px;
+            top: 4px;
+            left: 4px;
+            transition: transform 0.3s;
+        }
+
+        /* 直播卡片 */
+        .live-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .live-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .live-cover {
+            position: relative;
+            padding-top: 100%;
+        }
+
+        .live-cover img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .live-status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .live-viewers {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .live-info {
+            padding: 10px;
+        }
+
+        .live-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .live-anchor {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .anchor-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .anchor-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .anchor-name {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 滑动返回区域 */
+        .slide-back-area {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            z-index: 1000;
+        }
+
+        /* 添加加载更多按钮 */
+        .load-more {
+            text-align: center;
+            padding: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .load-more-btn {
+            background: none;
+            border: none;
+            color: #FF6B6B;
+            font-size: 14px;
+            padding: 8px 20px;
+            cursor: pointer;
+        }
+
+        /* 添加下拉刷新提示 */
+        .refresh-tip {
+            text-align: center;
+            padding: 10px;
+            color: #999;
+            font-size: 14px;
+            display: none;
+        }
+
+        .refresh-tip.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-back-area"></div>
+
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+        <div class="search-box">
+            <i class="material-icons search-icon">search</i>
+            <input type="text" class="search-input" placeholder="搜索主播/直播间">
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- 分类标签 -->
+        <div class="category-tabs">
+            <div class="category-tab active" data-index="0">全部</div>
+            <div class="category-tab" data-index="1">音乐</div>
+            <div class="category-tab" data-index="2">舞蹈</div>
+            <div class="tab-slider"></div>
+        </div>
+
+        <!-- 下拉刷新提示 -->
+        <div class="refresh-tip">
+            <i class="material-icons">refresh</i>
+            下拉刷新
+        </div>
+
+        <!-- 直播列表 -->
+        <div class="live-grid">
+            <!-- 直播1 -->
+            <div class="live-card">
+                <div class="live-cover">
+                    <img src="https://s1.imagehub.cc/images/2024/11/08/517863d36cc7513386d28d457636008d.jpeg" alt="直播封面">
+                    <div class="live-status">
+                        <i class="material-icons" style="font-size: 14px;">fiber_manual_record</i>
+                        直播中
+                    </div>
+                    <div class="live-viewers">
+                        <i class="material-icons" style="font-size: 14px;">visibility</i>
+                        2.8w
+                    </div>
+                </div>
+                <div class="live-info">
+                    <div class="live-title">一起来听歌吧~</div>
+                    <div class="live-anchor">
+                        <div class="anchor-avatar">
+                            <img src="https://s1.imagehub.cc/images/2024/11/08/517863d36cc7513386d28d457636008d.jpeg" alt="主播头像">
+                        </div>
+                        <div class="anchor-name">小甜甜</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 直播2 -->
+            <div class="live-card">
+                <div class="live-cover">
+                    <img src="https://s1.imagehub.cc/images/2024/11/08/517863d36cc7513386d28d457636008d.jpeg" alt="直播封面">
+                    <div class="live-status">
+                        <i class="material-icons" style="font-size: 14px;">fiber_manual_record</i>
+                        直播中
+                    </div>
+                    <div class="live-viewers">
+                        <i class="material-icons" style="font-size: 14px;">visibility</i>
+                        1.5w
+                    </div>
+                </div>
+                <div class="live-info">
+                    <div class="live-title">舞蹈练习室</div>
+                    <div class="live-anchor">
+                        <div class="anchor-avatar">
+                            <img src="https://s1.imagehub.cc/images/2024/11/08/517863d36cc7513386d28d457636008d.jpeg" alt="主播头像">
+                        </div>
+                        <div class="anchor-name">小可爱</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 更多直播卡片 -->
+        </div>
+
+        <!-- 加载更多按钮 -->
+        <div class="load-more">
+            <button class="load-more-btn">
+                加载更多
+                <i class="material-icons" style="font-size: 16px; vertical-align: middle;">keyboard_arrow_down</i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 添加动返回功能
+        let startX = 0;
+        let startY = 0;
+        const threshold = 50;
+
+        document.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (startX < 50) {
+                const deltaX = e.touches[0].clientX - startX;
+                const deltaY = Math.abs(e.touches[0].clientY - startY);
+                
+                if (deltaX > deltaY && deltaX > 0) {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (startX < 50) {
+                const deltaX = e.changedTouches[0].clientX - startX;
+                const deltaY = Math.abs(e.changedTouches[0].clientY - startY);
+                
+                if (deltaX > threshold && deltaX > deltaY) {
+                    window.location.href = 'quwanxingqiu.html';
+                }
+            }
+        });
+
+        // 分类标签切换
+        const tabs = document.querySelectorAll('.category-tab');
+        const slider = document.querySelector('.tab-slider');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // 移其他标签的active状态
+                tabs.forEach(t => t.classList.remove('active'));
+                // 添加当前标签的active状态
+                tab.classList.add('active');
+                // 移动滑块
+                const index = tab.dataset.index;
+                slider.style.transform = `translateX(${index * 100}%)`;
+                // 这里可以添加加载对应分类内容的逻辑
+            });
+        });
+
+        // 修改直播卡片点击事件
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.live-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    // 获取主播信息
+                    const anchorInfo = {
+                        name: card.querySelector('.anchor-name').textContent,
+                        avatar: card.querySelector('.anchor-avatar img').src,
+                        viewers: card.querySelector('.live-viewers').textContent,
+                        likes: '12.5w',
+                        gifts: '8.8w',
+                        tags: ['音乐', '声优', '才艺主播']  // 可以根据实际情况设置标签
+                    };
+                    
+                    // 将主播信息存储到localStorage
+                    localStorage.setItem('currentAnchor', JSON.stringify(anchorInfo));
+                    
+                    // 跳转到直播间页面
+                    window.location.href = 'liveroom.html';
+                });
+            });
+        });
+
+        // 添加加载更多功能
+        document.querySelector('.load-more-btn').addEventListener('click', () => {
+            // 这里可以添加加载更多内容的逻辑
+            alert('正在加载更多内容...');
+        });
+
+        // 添加下拉刷新功能
+        let touchStartY = 0;
+        let refreshing = false;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const scrollTop = document.documentElement.scrollTop;
+            
+            if (scrollTop === 0 && touchY - touchStartY > 50 && !refreshing) {
+                document.querySelector('.refresh-tip').classList.add('show');
+            }
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchY = e.changedTouches[0].clientY;
+            const scrollTop = document.documentElement.scrollTop;
+            
+            if (scrollTop === 0 && touchY - touchStartY > 50 && !refreshing) {
+                refreshing = true;
+                // 显示刷新动画
+                document.querySelector('.refresh-tip').textContent = '刷新中...';
+                
+                // 模拟刷新操作
+                setTimeout(() => {
+                    document.querySelector('.refresh-tip').classList.remove('show');
+                    document.querySelector('.refresh-tip').textContent = '下拉刷新';
+                    refreshing = false;
+                    alert('刷新成功');
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html> 
